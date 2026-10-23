@@ -32,11 +32,14 @@ Table of Contents
     * [set_decode_base32](#set_decode_base32)
     * [set_encode_base64](#set_encode_base64)
     * [set_decode_base64](#set_decode_base64)
+    * [set_encode_base64url](#set_encode_base64url)
+    * [set_decode_base64url](#set_decode_base64url)
     * [set_encode_hex](#set_encode_hex)
     * [set_decode_hex](#set_decode_hex)
     * [set_sha1](#set_sha1)
     * [set_md5](#set_md5)
     * [set_hmac_sha1](#set_hmac_sha1)
+    * [set_hmac_sha256](#set_hmac_sha256)
     * [set_random](#set_random)
     * [set_secure_random_alphanum](#set_secure_random_alphanum)
     * [set_secure_random_lcalpha](#set_secure_random_lcalpha)
@@ -60,7 +63,7 @@ Table of Contents
 Version
 =======
 
-This document describes ngx_set_misc [v0.31](https://github.com/openresty/set-misc-nginx-module/tags) released on 15 August 2016.
+This document describes ngx_set_misc [v0.32](https://github.com/openresty/set-misc-nginx-module/tags) released on 19 April 2018.
 
 Synopsis
 ========
@@ -592,7 +595,7 @@ set_decode_base32
 
 **category:** *ndk_set_var_value*
 
-Similar to the [set_encode_base32](#set_encode_base32) directive, but does exactly the the opposite operation, .i.e, decoding a base32(hex) digest into its original form.
+Similar to the [set_encode_base32](#set_encode_base32) directive, but does exactly the opposite operation, .i.e, decoding a base32(hex) digest into its original form.
 
 [Back to TOC](#table-of-contents)
 
@@ -648,6 +651,58 @@ This directive can be invoked by [lua-nginx-module](http://github.com/openresty/
 
 [Back to TOC](#table-of-contents)
 
+set_encode_base64url
+-----------------
+**syntax:** *set_encode_base64url $dst &lt;src&gt;*
+
+**syntax:** *set_encode_base64url $dst*
+
+**default:** *no*
+
+**context:** *location, location if*
+
+**phase:** *rewrite*
+
+**category:** *ndk_set_var_value*
+
+When taking two arguments, this directive will encode the value of the second argument `<src>` to its base64 url safe digest and assign the result into the first argument, variable `$dst`. For example,
+
+```nginx
+
+ location /test {
+     set $raw "abcde";
+     set_encode_base64url $digest $raw;
+
+     echo $digest;
+ }
+```
+
+Then request `GET /test` will yield the following output
+
+```
+YWJjZGU=
+```
+
+Please note that we're using [echo-nginx-module](http://github.com/openresty/echo-nginx-module)'s [echo directive](http://github.com/openresty/echo-nginx-module#echo) here to output values of nginx variables directly.
+
+When taking a single argument, this directive will do in-place modification of the argument variable. For example,
+
+```nginx
+
+ location /test {
+     set $value "abcde";
+     set_encode_base64url $value;
+
+     echo $value;
+ }
+```
+
+then request `GET /test` will give exactly the same output as the previous example.
+
+This directive can be invoked by [lua-nginx-module](http://github.com/openresty/lua-nginx-module)'s [ndk.set_var.DIRECTIVE](http://github.com/openresty/lua-nginx-module#ndkset_vardirective) interface and [array-var-nginx-module](http://github.com/openresty/array-var-nginx-module)'s [array_map_op](http://github.com/openresty/array-var-nginx-module#array_map_op) directive.
+
+[Back to TOC](#table-of-contents)
+
 set_decode_base64
 -----------------
 **syntax:** *set_decode_base64 $dst &lt;src&gt;*
@@ -662,7 +717,25 @@ set_decode_base64
 
 **category:** *ndk_set_var_value*
 
-Similar to the [set_encode_base64](#set_encode_base64) directive, but does exactly the the opposite operation, .i.e, decoding a base64 digest into its original form.
+Similar to the [set_encode_base64](#set_encode_base64) directive, but does exactly the opposite operation, .i.e, decoding a base64 digest into its original form.
+
+[Back to TOC](#table-of-contents)
+
+set_decode_base64url
+-----------------
+**syntax:** *set_decode_base64url $dst &lt;src&gt;*
+
+**syntax:** *set_decode_base64url $dst*
+
+**default:** *no*
+
+**context:** *location, location if*
+
+**phase:** *rewrite*
+
+**category:** *ndk_set_var_value*
+
+Similar to the [set_encode_base64url](#set_encode_base64url) directive, but does exactly the the opposite operation, .i.e, decoding a base64 url safe digest into its original form.
 
 [Back to TOC](#table-of-contents)
 
@@ -732,7 +805,7 @@ set_decode_hex
 
 **category:** *ndk_set_var_value*
 
-Similar to the [set_encode_hex](#set_encode_hex) directive, but does exactly the the opposite operation, .i.e, decoding a hexadecimal digest into its original form.
+Similar to the [set_encode_hex](#set_encode_hex) directive, but does exactly the opposite operation, .i.e, decoding a hexadecimal digest into its original form.
 
 [Back to TOC](#table-of-contents)
 
@@ -881,7 +954,48 @@ R/pvxzHC4NLtj7S+kXFg/NePTmk=
 
 Please note that we're using [echo-nginx-module](http://github.com/openresty/echo-nginx-module)'s [echo directive](http://github.com/openresty/echo-nginx-module#echo) here to output values of nginx variables directly.
 
-This directive requires the OpenSSL library enabled in your Nignx build (usually by passing the `--with-http_ssl_module` option to the `./configure` script).
+This directive requires the OpenSSL library enabled in your Nginx build (usually by passing the `--with-http_ssl_module` option to the `./configure` script).
+
+[Back to TOC](#table-of-contents)
+
+set_hmac_sha256
+---------------
+**syntax:** *set_hmac_sha256 $dst &lt;secret_key&gt; &lt;src&gt;*
+
+**syntax:** *set_hmac_sha256 $dst*
+
+**default:** *no*
+
+**context:** *location, location if*
+
+**phase:** *rewrite*
+
+Computes the [HMAC-SHA256](http://en.wikipedia.org/wiki/HMAC) digest of the argument `<src>` and assigns the result into the argument variable `$dst` with the secret key `<secret_key>`.
+
+The raw binary form of the `HMAC-SHA256` digest will be generated, use [set_encode_base64](#set_encode_base64), for example, to encode the result to a textual representation if desired.
+
+For example,
+
+```nginx
+
+ location /test {
+     set $secret 'thisisverysecretstuff';
+     set $string_to_sign 'some string we want to sign';
+     set_hmac_sha256 $signature $secret $string_to_sign;
+     set_encode_base64 $signature $signature;
+     echo $signature;
+ }
+```
+
+Then request `GET /test` will yield the following output
+
+```
+4pU3GRQrKKIoeLb9CqYsavHE2l6Hx+KMmRmesU+Cfrs=
+```
+
+Please note that we're using [echo-nginx-module](http://github.com/openresty/echo-nginx-module)'s [echo directive](http://github.com/openresty/echo-nginx-module#echo) here to output values of nginx variables directly.
+
+This directive requires the OpenSSL library enabled in your Nginx build (usually by passing the `--with-http_ssl_module` option to the `./configure` script).
 
 [Back to TOC](#table-of-contents)
 
@@ -1007,10 +1121,10 @@ set_rotate
 **phase:** *rewrite*
 
 Increments `$value` but keeps it in range from `<from>` to `<to>`. 
-If `$value` is greater than `<to>` or less than `<from>` is will be 
+If `$value` is greater than `<to>` or less than `<from>` it will be 
 set to `<from>` value.
 
-The current value after running this directive will always be saved on a per-location basis. And the this saved value will be used for incrementation when the `$value` is not initialized or has a bad value.
+The current value after running this directive will always be saved on a per-location basis. And then this saved value will be used for incrementation when the `$value` is not initialized or has a bad value.
 
 Only non-negative numbers are allowed for the `<from>` and `<to>` arguments.
 
@@ -1077,7 +1191,7 @@ then request `GET /today` will output something like
 2011-08-16
 ```
 
-and year, the actual date you get here will vary every day ;)
+and yeah, the actual date you get here will vary every day ;)
 
 Behind the scene, this directive utilizes the `ngx_time` API in the Nginx core, so usually no syscall is involved due to the time caching mechanism in the Nginx core.
 
@@ -1175,13 +1289,13 @@ Installation
 This module is included and enabled by default in the [OpenResty bundle](http://openresty.org). If you want to install this module manually with your own Nginx source tarball, then follow the steps below:
 
 Grab the nginx source code from [nginx.org](http://nginx.org/), for example,
-the version 1.11.2 (see [nginx compatibility](#compatibility)), and then build the source with this module:
+the version 1.13.6 (see [nginx compatibility](#compatibility)), and then build the source with this module:
 
 ```bash
 
- wget 'http://nginx.org/download/nginx-1.11.2.tar.gz'
- tar -xzvf nginx-1.11.2.tar.gz
- cd nginx-1.11.2/
+ wget 'http://nginx.org/download/nginx-1.13.6.tar.gz'
+ tar -xzvf nginx-1.13.6.tar.gz
+ cd nginx-1.13.6/
 
  # Here we assume you would install you nginx under /opt/nginx/.
  ./configure --prefix=/opt/nginx \
@@ -1193,7 +1307,7 @@ the version 1.11.2 (see [nginx compatibility](#compatibility)), and then build t
  make install
 ```
 
-Download the latest version of the release tarball of this module from [set-misc-nginx-module file list](http://github.com/openresty/set-misc-nginx-module/tags), and the latest tarball for [ngx_devel_kit](https://github.com/simpl/ngx_devel_kit) from its [file list](https://github.com/simpl/ngx_devel_kit/tags).
+Download the latest version of the release tarball of this module from [set-misc-nginx-module file list](http://github.com/openresty/set-misc-nginx-module/tags), and the latest tarball for [ngx_devel_kit](https://github.com/simplresty/ngx_devel_kit) from its [file list](https://github.com/simplresty/ngx_devel_kit/tags).
 
 [Back to TOC](#table-of-contents)
 
@@ -1218,6 +1332,8 @@ Compatibility
 
 The following versions of Nginx should work with this module:
 
+* **1.13.x**                      (last tested: 1.13.6)
+* **1.12.x**
 * **1.11.x**                      (last tested: 1.11.2)
 * **1.10.x**
 * **1.9.x**                       (last tested: 1.9.15)
@@ -1301,7 +1417,7 @@ This wiki page is also maintained by the author himself, and everybody is encour
 Copyright & License
 ===================
 
-Copyright (C) 2009-2017, Yichun Zhang (章亦春) <agentzh@gmail.com>, OpenResty Inc.
+Copyright (C) 2009-2018, Yichun Zhang (章亦春) <agentzh@gmail.com>, OpenResty Inc.
 
 This module is licensed under the terms of the BSD license.
 

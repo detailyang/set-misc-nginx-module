@@ -86,57 +86,89 @@ ngx_http_pg_utf_islegal(const unsigned char *s, ngx_int_t len)
 
     while (slen > 0) {
         mblen = ngx_http_pg_utf_mblen(s);
-        if (slen < mblen)
+        if (slen < mblen) {
             return 0;
-
-        switch(mblen)
-        {
-            default:
-                return 0;
-            case 4:
-                a = *(s + 3);
-                if (a < 0x80 || a > 0xBF)
-                    return 0;
-            case 3:
-                a = *(s + 2);
-                if (a < 0x80 || a > 0xBF)
-                    return 0;
-            case 2:
-                a = *(s + 1);
-                switch (*s)
-                {
-                    case 0xE0:
-                        if (a < 0xA0 || a > 0xBF)
-                            return 0;
-                        break;
-                    case 0xED:
-                        if (a < 0x80 || a > 0x9F)
-                            return 0;
-                        break;
-                    case 0xF0:
-                        if (a < 0x90 || a > 0xBF)
-                            return 0;
-                        break;
-                    case 0xF4:
-                        if (a < 0x80 || a > 0x8F)
-                            return 0;
-                        break;
-                    default:
-                        if (a < 0x80 || a > 0xBF)
-                            return 0;
-                        break;
-                }
-            case 1:
-                a = *s;
-                if (a >= 0x80 && a < 0xC2)
-                    return 0;
-                if (a > 0xF4)
-                    return 0;
-                break;
         }
 
-        s       += mblen;
-        slen    -= mblen;
+        switch (mblen) {
+
+        case 4:
+            a = *(s + 3);
+            if (a < 0x80 || a > 0xBF) {
+                return 0;
+            }
+
+            break;
+
+        case 3:
+            a = *(s + 2);
+            if (a < 0x80 || a > 0xBF) {
+                return 0;
+            }
+
+            break;
+
+        case 2:
+            a = *(s + 1);
+
+            switch (*s) {
+
+            case 0xE0:
+                if (a < 0xA0 || a > 0xBF) {
+                    return 0;
+                }
+
+                break;
+
+            case 0xED:
+                if (a < 0x80 || a > 0x9F) {
+                    return 0;
+                }
+
+                break;
+
+            case 0xF0:
+                if (a < 0x90 || a > 0xBF) {
+                    return 0;
+                }
+
+                break;
+
+            case 0xF4:
+                if (a < 0x80 || a > 0x8F) {
+                    return 0;
+                }
+
+                break;
+
+            default:
+                if (a < 0x80 || a > 0xBF) {
+                    return 0;
+                }
+
+                break;
+            }
+
+            break;
+
+        case 1:
+            a = *s;
+            if (a >= 0x80 && a < 0xC2) {
+                return 0;
+            }
+
+            if (a > 0xF4) {
+                return 0;
+            }
+
+            break;
+
+        default:
+            return 0;
+        }
+
+        s += mblen;
+        slen -= mblen;
     }
 
     return 1;
@@ -159,6 +191,7 @@ ngx_http_pg_utf_escape(ngx_http_request_t *r, ngx_str_t *res)
         if (*d & 0x80) {
             count += 4;
         }
+
         d++;
         count++;
     }
@@ -179,9 +212,11 @@ ngx_http_pg_utf_escape(ngx_http_request_t *r, ngx_str_t *res)
             *p++ = (*d >> 6) + '0';
             *p++ = ((*d >> 3) & 07) + '0';
             *p++ = (*d & 07) + '0';
+
         } else {
             *p++ = *d;
         }
+
         d++;
     }
 
@@ -260,6 +295,7 @@ ngx_http_set_misc_escape_sql_str(u_char *dst, u_char *src, size_t size)
                     case '\\':
                     case '\'':
                     case '"':
+                    case '$':
                     case 26: /* \Z */
                         n++;
                         break;
@@ -267,6 +303,7 @@ ngx_http_set_misc_escape_sql_str(u_char *dst, u_char *src, size_t size)
                         break;
                 }
             }
+
             src++;
             size--;
         }
@@ -317,6 +354,11 @@ ngx_http_set_misc_escape_sql_str(u_char *dst, u_char *src, size_t size)
                     *dst++ = '"';
                     break;
 
+                case '$':
+                    *dst++ = '\\';
+                    *dst++ = '$';
+                    break;
+
                 case 26:
                     *dst++ = '\\';
                     *dst++ = 'Z';
@@ -326,9 +368,11 @@ ngx_http_set_misc_escape_sql_str(u_char *dst, u_char *src, size_t size)
                     *dst++ = *src;
                     break;
             }
+
         } else {
             *dst++ = *src;
         }
+
         src++;
         size--;
     } /* while (size) */
